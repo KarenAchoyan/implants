@@ -9,7 +9,7 @@ import {
     LaptopOutlined,
     NotificationOutlined,
     SettingOutlined,
-    LogoutOutlined, BellOutlined,
+    LogoutOutlined, BellOutlined, HistoryOutlined,
 } from '@ant-design/icons';
 import Link from 'next/link';
 
@@ -71,11 +71,8 @@ const App = ({ children }) => {
                         </Menu.Item>
                     </SubMenu>
                     <SubMenu key="sub2" icon={<LaptopOutlined />} title="Payments">
-                        <Menu.Item key="3">
-                            <Link href="/payments/unpaid">Unpaid Orders</Link>
-                        </Menu.Item>
                         <Menu.Item key="4">
-                            <Link href="/payments/all">All Orders</Link>
+                            <Link href="/orders/all">All Orders</Link>
                         </Menu.Item>
                     </SubMenu>
                     <SubMenu key="sub3" icon={<NotificationOutlined />} title="Clients">
@@ -86,6 +83,12 @@ const App = ({ children }) => {
                             <Link href="/clients/all">All Clients</Link>
                         </Menu.Item>
                     </SubMenu>
+                    <Menu.Item key="event-history" icon={<HistoryOutlined />}>
+                        <Link href="/events">Event History</Link>
+                    </Menu.Item>
+                    <Menu.Item key="must-order" icon={<LaptopOutlined />}>
+                        <Link href="/orders/mustOrder">Must Order</Link>
+                    </Menu.Item>
                 </Menu>
             </Sider>
             <Layout className="site-layout">

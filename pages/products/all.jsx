@@ -1,7 +1,7 @@
 // components/AllProducts.js
 
 import React, { useState } from 'react';
-import {Table, Button, Modal, Form, Input, Upload, message, Typography, Card} from 'antd';
+import { Table, Button, Modal, Form, Input, Upload, message, Typography, Card } from 'antd';
 import { EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
 import App from "../../components/layouts/app";
 
@@ -53,8 +53,10 @@ const All = () => {
     ]);
 
     const [isModalVisible, setIsModalVisible] = useState(false);
+    const [isOrderModalVisible, setIsOrderModalVisible] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [form] = Form.useForm();
+    const [orderForm] = Form.useForm();
 
     // Delete a product
     const deleteProduct = (id) => {
@@ -76,6 +78,12 @@ const All = () => {
         setProducts(updatedProducts);
         message.success('Product updated successfully!');
         setIsModalVisible(false);
+    };
+
+    // Handle order submission
+    const handleOrder = (values) => {
+        message.success(`Ordered ${values.quantity} units of ${editingProduct.name}!`);
+        setIsOrderModalVisible(false);
     };
 
     // Table columns
@@ -121,22 +129,31 @@ const All = () => {
             key: 'actions',
             render: (_, product) => (
                 <span>
-          <Button
-              type="link"
-              icon={<EditOutlined />}
-              onClick={() => editProduct(product)}
-          >
-            Edit
-          </Button>
-          <Button
-              type="link"
-              icon={<DeleteOutlined />}
-              onClick={() => deleteProduct(product.id)}
-              danger
-          >
-            Delete
-          </Button>
-        </span>
+                    <Button
+                        type="link"
+                        icon={<EditOutlined />}
+                        onClick={() => editProduct(product)}
+                    >
+                        Edit
+                    </Button>
+                    <Button
+                        type="link"
+                        icon={<DeleteOutlined />}
+                        onClick={() => deleteProduct(product.id)}
+                        danger
+                    >
+                        Delete
+                    </Button>
+                    <Button
+                        type="link"
+                        onClick={() => {
+                            setEditingProduct(product);
+                            setIsOrderModalVisible(true);
+                        }}
+                    >
+                        To be ordered
+                    </Button>
+                </span>
             ),
         },
     ];
@@ -230,6 +247,34 @@ const All = () => {
                                 <Form.Item>
                                     <Button type="primary" htmlType="submit" block>
                                         Save Changes
+                                    </Button>
+                                </Form.Item>
+                            </Form>
+                        </Modal>
+
+                        {/* Order Modal */}
+                        <Modal
+                            title="Order Product"
+                            visible={isOrderModalVisible}
+                            onCancel={() => setIsOrderModalVisible(false)}
+                            footer={null}
+                        >
+                            <Form
+                                form={orderForm}
+                                layout="vertical"
+                                onFinish={handleOrder}
+                            >
+                                <Form.Item
+                                    label="Quantity"
+                                    name="quantity"
+                                    rules={[{ required: true, message: 'Please enter the quantity!' }]}
+                                >
+                                    <Input type="number" placeholder="Enter Quantity" />
+                                </Form.Item>
+
+                                <Form.Item>
+                                    <Button type="primary" htmlType="submit" block>
+                                        Place Order
                                     </Button>
                                 </Form.Item>
                             </Form>
