@@ -1,92 +1,86 @@
 // components/AllProducts.js
 
-import React, { useState } from 'react';
-import { Table, Button, Modal, Form, Input, Upload, message, Typography, Card } from 'antd';
-import { EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import React, {useEffect, useState} from 'react';
+import {Table, Button, Modal, Form, Input, Upload, message, Typography, Card} from 'antd';
+import {EditOutlined, DeleteOutlined, UploadOutlined} from '@ant-design/icons';
 import App from "../../components/layouts/app";
+import {useDispatch, useSelector} from "react-redux";
+import {callProduct, deleteProduct, getProducts, updateProduct} from "../../store/product/actions";
+import UploadAvatar from "../../components/products/uploadAvatar";
+import {call, put} from "redux-saga/effects";
+import axiosInstance from "../../configs/axiosIntance";
 
-const { Title } = Typography;
-const { TextArea } = Input;
+const {Title} = Typography;
+const {TextArea} = Input;
 
 const All = () => {
-    const [products, setProducts] = useState([
-        {
-            id: 1,
-            name: 'Product A',
-            avatar: 'https://via.placeholder.com/50',
-            diameters: '10cm',
-            length: '20cm',
-            degree: '45',
-            ref: 'REF123',
-            description: 'A nice product',
-        },
-        {
-            id: 2,
-            name: 'Product B',
-            avatar: 'https://via.placeholder.com/50',
-            diameters: '15cm',
-            length: '25cm',
-            degree: '30',
-            ref: 'REF456',
-            description: 'Another great product',
-        },
-        {
-            id: 3,
-            name: 'Product C',
-            avatar: 'https://via.placeholder.com/50',
-            diameters: '12cm',
-            length: '30cm',
-            degree: '60',
-            ref: 'REF789',
-            description: 'This product is awesome',
-        },
-        {
-            id: 4,
-            name: 'Product D',
-            avatar: 'https://via.placeholder.com/50',
-            diameters: '20cm',
-            length: '40cm',
-            degree: '90',
-            ref: 'REF101',
-            description: 'A must-have product',
-        },
-    ]);
-
+    const products = useSelector(state => state.product.products);
+    const [avatarFile, setAvatarFile] = useState(null);
+    const [avatarPreview, setAvatarPreview] = useState(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [isOrderModalVisible, setIsOrderModalVisible] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
+
+    const dispatch = useDispatch();
+
+    useEffect(() => {
+        dispatch(getProducts.request())
+    }, [])
+
     const [form] = Form.useForm();
     const [orderForm] = Form.useForm();
 
     // Delete a product
-    const deleteProduct = (id) => {
-        setProducts(products.filter((product) => product.id !== id));
+    const deleteProductHandler = (id) => {
+
+        dispatch(deleteProduct.request({id}))
         message.success('Product deleted successfully!');
     };
 
     // Edit a product
     const editProduct = (product) => {
         setEditingProduct(product);
+        setAvatarPreview(process.env.IMAGE_URL + product.avatar);
         setIsModalVisible(true);
     };
 
-    // Save edited product
     const handleSave = (values) => {
-        const updatedProducts = products.map((product) =>
-            product.id === editingProduct.id ? { ...product, ...values } : product
-        );
-        setProducts(updatedProducts);
+        const formData = new FormData();
+        formData.append('name', values.name);
+        formData.append('diameter', values.diameter);
+        formData.append('length', values.length);
+        formData.append('degree', values.degree);
+        formData.append('ref', values.ref);
+        formData.append('price', values.price);
+        formData.append('sale_price', values.sale_price);
+        formData.append('description', values.description);
+        if (avatarFile) {
+            formData.append('avatar', avatarFile);
+        }
+        dispatch(updateProduct.request({formData, id:editingProduct.id}))
         message.success('Product updated successfully!');
         setIsModalVisible(false);
     };
 
-    // Handle order submission
     const handleOrder = (values) => {
+        const formData = new FormData();
+        formData.append('quantity', values.quantity);
+        dispatch(callProduct.request({formData, id:editingProduct.id}))
         message.success(`Ordered ${values.quantity} units of ${editingProduct.name}!`);
         setIsOrderModalVisible(false);
     };
+    const handleAvatarChange = async (info) => {
+        const file = info.fileList[0].originFileObj;
+        if (file instanceof Blob) {
+            setAvatarFile(file);
+            const reader = new FileReader();
+            reader.onload = () => {
+                setAvatarPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
-    // Table columns
     const columns = [
         {
             title: 'Name',
@@ -97,12 +91,12 @@ const All = () => {
             title: 'Avatar',
             dataIndex: 'avatar',
             key: 'avatar',
-            render: (text) => <img src={text} alt="avatar" style={{ width: 50, height: 50 }} />,
+            render: (text) => <img src={process.env.IMAGE_URL + text} alt="avatar" style={{width: 50, height: 50}}/>,
         },
         {
             title: 'Diameters',
-            dataIndex: 'diameters',
-            key: 'diameters',
+            dataIndex: 'diameter',
+            key: 'diameter',
         },
         {
             title: 'Length',
@@ -115,9 +109,24 @@ const All = () => {
             key: 'degree',
         },
         {
+            title: 'Quantity',
+            dataIndex: 'quantity',
+            key: 'quantity',
+        },
+        {
             title: 'Ref',
             dataIndex: 'ref',
             key: 'ref',
+        },
+        {
+            title: 'Price',
+            dataIndex: 'price',
+            key: 'price',
+        },
+        {
+            title: 'Sale price',
+            dataIndex: 'sale_price',
+            key: 'sale_price',
         },
         {
             title: 'Description',
@@ -131,15 +140,15 @@ const All = () => {
                 <span>
                     <Button
                         type="link"
-                        icon={<EditOutlined />}
+                        icon={<EditOutlined/>}
                         onClick={() => editProduct(product)}
                     >
                         Edit
                     </Button>
                     <Button
                         type="link"
-                        icon={<DeleteOutlined />}
-                        onClick={() => deleteProduct(product.id)}
+                        icon={<DeleteOutlined/>}
+                        onClick={() => deleteProductHandler(product.id)}
                         danger
                     >
                         Delete
@@ -162,12 +171,12 @@ const All = () => {
         <>
             <App>
                 <Card title={'All products'}>
-                    <div style={{ padding: '50px' }}>
+                    <div style={{padding: '50px'}}>
                         <Table
                             dataSource={products}
                             columns={columns}
                             rowKey="id"
-                            pagination={{ pageSize: 5 }}
+                            pagination={{pageSize: 5}}
                         />
 
                         {/* Edit Modal */}
@@ -186,62 +195,43 @@ const All = () => {
                                 <Form.Item
                                     label="Name"
                                     name="name"
-                                    rules={[{ required: true, message: 'Please enter the product name!' }]}
+                                    rules={[{required: true, message: 'Please enter the product name!'}]}
                                 >
-                                    <Input placeholder="Enter Product Name" />
+                                    <Input placeholder="Enter Product Name"/>
                                 </Form.Item>
 
-                                {/*<Form.Item*/}
-                                {/*    label="Avatar"*/}
-                                {/*    name="avatar"*/}
-                                {/*    valuePropName="fileList"*/}
-                                {/*    getValueFromEvent={(e) => {*/}
-                                {/*        if (Array.isArray(e)) {*/}
-                                {/*            return e;*/}
-                                {/*        }*/}
-                                {/*        return e?.fileList;*/}
-                                {/*    }}*/}
-                                {/*>*/}
-                                {/*    <Upload*/}
-                                {/*        name="avatar"*/}
-                                {/*        listType="picture"*/}
-                                {/*        maxCount={1}*/}
-                                {/*        beforeUpload={() => false}*/}
-                                {/*        defaultFileList={[*/}
-                                {/*            {*/}
-                                {/*                uid: '-1',*/}
-                                {/*                name: 'default.png',*/}
-                                {/*                status: 'done',*/}
-                                {/*                url: editingProduct?.avatar,*/}
-                                {/*            },*/}
-                                {/*        ]}*/}
-                                {/*    >*/}
-                                {/*        <Button icon={<UploadOutlined />}>Upload Avatar</Button>*/}
-                                {/*    </Upload>*/}
-                                {/*</Form.Item>*/}
+                                <UploadAvatar avatarFile={avatarFile} avatarPreview={avatarPreview}
+                                              handleAvatarChange={handleAvatarChange}/>
 
-                                <Form.Item label="Diameters" name="diameters">
-                                    <Input placeholder="Enter Diameters" />
+
+                                <Form.Item label="Diameters" name="diameter">
+                                    <Input placeholder="Enter Diameters"/>
                                 </Form.Item>
 
                                 <Form.Item label="Length" name="length">
-                                    <Input placeholder="Enter Length" />
+                                    <Input placeholder="Enter Length"/>
                                 </Form.Item>
 
                                 <Form.Item label="Degree" name="degree">
-                                    <Input placeholder="Enter Degree" />
+                                    <Input placeholder="Enter Degree"/>
+                                </Form.Item>
+                                <Form.Item label="Price" name="price">
+                                    <Input placeholder="Enter Price"/>
+                                </Form.Item>
+                                <Form.Item label="Sale Price" name="sale_price">
+                                    <Input placeholder="Enter Sale Price"/>
                                 </Form.Item>
 
                                 <Form.Item
                                     label="Ref"
                                     name="ref"
-                                    rules={[{ required: true, message: 'Please enter the reference!' }]}
+                                    rules={[{required: true, message: 'Please enter the reference!'}]}
                                 >
-                                    <Input placeholder="Enter Ref" />
+                                    <Input placeholder="Enter Ref"/>
                                 </Form.Item>
 
                                 <Form.Item label="Description" name="description">
-                                    <TextArea rows={4} placeholder="Enter Description" />
+                                    <TextArea rows={4} placeholder="Enter Description"/>
                                 </Form.Item>
 
                                 <Form.Item>
@@ -267,9 +257,9 @@ const All = () => {
                                 <Form.Item
                                     label="Quantity"
                                     name="quantity"
-                                    rules={[{ required: true, message: 'Please enter the quantity!' }]}
+                                    rules={[{required: true, message: 'Please enter the quantity!'}]}
                                 >
-                                    <Input type="number" placeholder="Enter Quantity" />
+                                    <Input type="number" placeholder="Enter Quantity"/>
                                 </Form.Item>
 
                                 <Form.Item>

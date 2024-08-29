@@ -12,11 +12,14 @@ import {
     LogoutOutlined, BellOutlined, HistoryOutlined,
 } from '@ant-design/icons';
 import Link from 'next/link';
+import useAuthRedirect from "../../hooks/useAuthRedirect";
 
 const { Header, Sider, Content } = Layout;
 const { SubMenu } = Menu;
 
 const App = ({ children }) => {
+    const {isLoader} = useAuthRedirect()
+
     const [collapsed, setCollapsed] = useState(false);
     const [notifications, setNotifications] = useState([
         { id: 1, title: 'New Order', description: 'You have received a new order.' },
@@ -26,7 +29,9 @@ const App = ({ children }) => {
     const toggle = () => {
         setCollapsed(!collapsed);
     };
-
+    if (isLoader) {
+        return <h1>Loading...</h1>;
+    }
     const menu = (
         <Menu>
             <Menu.Item key="settings" icon={<SettingOutlined />}>

@@ -1,41 +1,25 @@
-import React, { useState } from 'react';
-import { Table, Button, Modal, Form, Input, message, Typography, Card, List } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import React, {useEffect, useState} from 'react';
+import {Table, Button, Modal, Form, Input, message, Typography, Card, List} from 'antd';
+import {EditOutlined, DeleteOutlined} from '@ant-design/icons';
 import App from "../../components/layouts/app";
+import {useDispatch, useSelector} from "react-redux";
+import {getClients} from "../../store/client/actions";
 
-const { Title } = Typography;
+const {Title} = Typography;
 
 const All = () => {
-    const [clinics, setClinics] = useState([
-        {
-            id: 1, clinicaName: 'Clinica A', ownerName: 'John', ownerSurname: 'Doe', dept: 1,
-            dateOfDept: '2023-08-01', products: [
-                { name: 'Product 1', quantity: 10, price: 100 },
-                { name: 'Product 2', quantity: 5, price: 50 }
-            ]
-        },
-        {
-            id: 2, clinicaName: 'Clinica B', ownerName: 'Jane', ownerSurname: 'Smith', dept: 0,
-            dateOfDept: '', products: []
-        },
-        {
-            id: 3, clinicaName: 'Clinica C', ownerName: 'Mike', ownerSurname: 'Johnson', dept: 1,
-            dateOfDept: '2023-07-15', products: [
-                { name: 'Product 3', quantity: 3, price: 75 }
-            ]
-        },
-        {
-            id: 4, clinicaName: 'Clinica D', ownerName: 'Anna', ownerSurname: 'Taylor', dept: 0,
-            dateOfDept: '', products: []
-        },
-    ]);
+    const clients = useSelector(state => state.client.clients);
+    const dispatch = useDispatch();
 
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [isDeptModalVisible, setIsDeptModalVisible] = useState(false);
     const [editingClinic, setEditingClinic] = useState(null);
-    const [deptModalData, setDeptModalData] = useState({ dateOfDept: '', products: [], total: 0 });
+    const [deptModalData, setDeptModalData] = useState({dateOfDept: '', products: [], total: 0});
 
-    // Delete a clinic
+    useEffect(() => {
+        dispatch(getClients.request());
+    }, [dispatch])
+
     const deleteClinic = (id) => {
         setClinics(clinics.filter(clinic => clinic.id !== id));
         message.success('Clinic deleted successfully!');
@@ -50,7 +34,7 @@ const All = () => {
     // Save edited clinic
     const handleSave = (values) => {
         const updatedClinics = clinics.map(clinic =>
-            clinic.id === editingClinic.id ? { ...clinic, ...values } : clinic
+            clinic.id === editingClinic.id ? {...clinic, ...values} : clinic
         );
         setClinics(updatedClinics);
         message.success('Clinic updated successfully!');
@@ -61,17 +45,26 @@ const All = () => {
     const showDeptDetails = (clinic) => {
         setEditingClinic(clinic);
 
-        if (clinic.dept === 1) {
-            const total = clinic.products.reduce((sum, product) => sum + (product.price * product.quantity), 0);
-            setDeptModalData({ dateOfDept: clinic.dateOfDept, products: clinic.products, total });
-            setIsDeptModalVisible(true); // Show the dept details modal
-        }
+        const products = [];
+        let total = 0;
+        clinic.orders.forEach(function (item) {
+            item.product_orders.forEach(function (product) {
+                product.product.quantity = product.quantity;
+                products.push(product.product)
+
+            })
+            total += item.total;
+
+        })
+
+        setDeptModalData({dateOfDept: clinic.updated_at, products: products, total});
+        setIsDeptModalVisible(true);
     };
 
     // Repay debt
     const repayDebt = (clinicId) => {
         const updatedClinics = clinics.map(clinic =>
-            clinic.id === clinicId ? { ...clinic, dept: 0 } : clinic
+            clinic.id === clinicId ? {...clinic, dept: 0} : clinic
         );
         setClinics(updatedClinics);
         message.success('Debt has been repaid!');
@@ -82,30 +75,51 @@ const All = () => {
     const columns = [
         {
             title: 'Clinica Name',
-            dataIndex: 'clinicaName',
-            key: 'clinicaName',
+            dataIndex: 'clinic_name',
+            key: 'clinic_name',
         },
         {
             title: 'Owner Name',
-            dataIndex: 'ownerName',
-            key: 'ownerName',
+            dataIndex: 'owner_name',
+            key: 'owner_name',
         },
         {
             title: 'Owner Surname',
-            dataIndex: 'ownerSurname',
-            key: 'ownerSurname',
+            dataIndex: 'owner_surname',
+            key: 'owner_surname',
         },
         {
             title: 'Dept',
             key: 'dept',
-            render: (_, clinic) => (
-                <span
-                    style={{ color: clinic.dept === 0 ? 'green' : 'red', cursor: clinic.dept === 1 ? 'pointer' : 'default' }}
-                    onClick={() => showDeptDetails(clinic)}
-                >
-                    {clinic.dept === 0 ? 'No Dept' : 'Yes Dept'}
-                </span>
-            ),
+            render: (_, clinic) => {
+                const data = clinic.orders.filter((item) => {
+                    return item.paid_status === 0;
+                })
+                if (data.length > 0) {
+                    return (
+                        <span
+                            style={{
+                                color: 'red',
+                                cursor: 'pointer'
+                            }}
+                            onClick={() => showDeptDetails(clinic)}
+                        >
+                                Yes Dept
+                            </span>
+                    )
+                } else {
+                    return (
+                        <span
+                            style={{
+                                color: 'green'
+                            }}
+                        >
+                                No Dept
+                            </span>
+                    )
+                }
+
+            }
         },
         {
             title: 'Actions',
@@ -114,14 +128,14 @@ const All = () => {
                 <span>
                     <Button
                         type="link"
-                        icon={<EditOutlined />}
+                        icon={<EditOutlined/>}
                         onClick={() => editClinic(clinic)}
                     >
                         Edit
                     </Button>
                     <Button
                         type="link"
-                        icon={<DeleteOutlined />}
+                        icon={<DeleteOutlined/>}
                         onClick={() => deleteClinic(clinic.id)}
                         danger
                     >
@@ -136,12 +150,12 @@ const All = () => {
         <>
             <App>
                 <Card title={'All Clinics'}>
-                    <div style={{ padding: '50px' }}>
+                    <div style={{padding: '50px'}}>
                         <Table
-                            dataSource={clinics}
+                            dataSource={clients}
                             columns={columns}
                             rowKey="id"
-                            pagination={{ pageSize: 5 }}
+                            pagination={{pageSize: 5}}
                         />
 
                         {/* Edit Modal */}
@@ -159,23 +173,23 @@ const All = () => {
                                 <Form.Item
                                     label="Clinica Name"
                                     name="clinicaName"
-                                    rules={[{ required: true, message: 'Please enter the Clinica name!' }]}
+                                    rules={[{required: true, message: 'Please enter the Clinica name!'}]}
                                 >
-                                    <Input />
+                                    <Input/>
                                 </Form.Item>
                                 <Form.Item
                                     label="Owner Name"
                                     name="ownerName"
-                                    rules={[{ required: true, message: 'Please enter the Owner name!' }]}
+                                    rules={[{required: true, message: 'Please enter the Owner name!'}]}
                                 >
-                                    <Input />
+                                    <Input/>
                                 </Form.Item>
                                 <Form.Item
                                     label="Owner Surname"
                                     name="ownerSurname"
-                                    rules={[{ required: true, message: 'Please enter the Owner surname!' }]}
+                                    rules={[{required: true, message: 'Please enter the Owner surname!'}]}
                                 >
-                                    <Input />
+                                    <Input/>
                                 </Form.Item>
                                 <Form.Item>
                                     <Button type="primary" htmlType="submit" block>
@@ -203,14 +217,14 @@ const All = () => {
                                 <List
                                     bordered
                                     dataSource={deptModalData.products}
-                                    renderItem={({ name, quantity, price }) => (
+                                    renderItem={({name, quantity, sale_price}) => (
                                         <List.Item>
-                                            {name} - Quantity: {quantity} - Price: ${price}
+                                            {name} - Quantity: {quantity} - Price: {sale_price} AMD
                                         </List.Item>
                                     )}
                                 />
                                 <Title level={4}>Total Price</Title>
-                                <p>${deptModalData.total}</p>
+                                <p>{deptModalData.total} AMD</p>
                             </div>
                         </Modal>
                     </div>
